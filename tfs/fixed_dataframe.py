@@ -66,6 +66,7 @@ will not be found. Not including them will result in unrestricted DataFrames.
 import os
 from collections import defaultdict, OrderedDict, namedtuple
 from contextlib import suppress
+from functools import partial
 
 from tfs.handler import TfsDataFrame, read_tfs, write_tfs
 from tfs.tools import DotDict
@@ -122,18 +123,26 @@ class FixedTfs(TfsDataFrame):
     The final class needs to define filename, columns and headers.
     The instance directory and plane.
     """
+    _metadata = TfsDataFrame._metadata + ["filename", "two_planes",
+                                          "_initialized",
+                                          "_filename", "_directory", "_plane",
+                                          "Columns", "Headers", "Index"]
 
     filename = ""
     two_planes = True
-    _initialized = False
 
-    def __init__(self, plane: str = "", directory: str = "", *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        plane = kwargs.pop("plane", "")
+        directory = kwargs.pop("directory", "")
+        TfsDataFrame.__init__(self, *args, **kwargs)
+        self._initialized = False
+
         cls = type(self)
         self._directory = directory
         self._plane = plane
         if not cls.two_planes and len(plane):
-            raise ValueError(f"{cls.__name__} is planeless, but a plane was defined.")
+            raise ValueError(f"{cls.__name__} is planeless, "
+                             "but a plane was defined.")
         self._filename = os.path.join(directory, cls.filename.format(plane))
 
         self.Columns = None
@@ -154,11 +163,24 @@ class FixedTfs(TfsDataFrame):
 
     def __setitem__(self, key, value):
         try:
-            return super().__setitem__(key, value)
+            return TfsDataFrame.__setitem__(self, key, value)
         finally:
             if self._initialized and key in self.columns:
                 for attribute in ("name", "dtype"):
                     self._validate(attribute, "Columns", key)
+
+    @property
+    def _constructor(self):
+        class TmpFixedTfs(type(self)):
+            def __init__(self, *args, **kwargs):
+                TfsDataFrame.__init__(self, *args, **kwargs)
+        return TmpFixedTfs
+
+    def __finalize__(self, *args, **kwargs):
+        TfsDataFrame.__finalize__(self, *args, **kwargs)
+        self._fill_missing_definitions()
+        self.validate_definitions()
+        return self
 
     # Fill function --------------------
 
@@ -178,7 +200,7 @@ class FixedTfs(TfsDataFrame):
         for name, datatype, _ in self.Columns:
             if name not in self.columns:
                 self[name] = DEFAULTS[datatype]
-        self.reindex(self.Columns.names)
+        # self.reindex(self.Columns.names, copy=False)
         self.astype({name: dtype for name, dtype, _ in self.Columns}, copy=False)
 
     def _fill_missing_headers(self):
@@ -253,5 +275,5 @@ class FixedTfs(TfsDataFrame):
         write_tfs(self._filename, self, save_index=self.index.name)
 
     def read(self) -> 'FixedTfs':
-        return type(self)(self._plane, self._directory,
-                          read_tfs(self._filename, index=self.index.name))
+        return type(self)(read_tfs(self._filename, index=self.index.name),
+                          plane=self._plane, directory=self._directory)

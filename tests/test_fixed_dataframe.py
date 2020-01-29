@@ -140,7 +140,7 @@ def test_single_plane_creation():
 def test_no_restrictions():
     df = PlanelessTfs(directory="")
     df["Allowed"] = 10
-    df.headers["Write"]  = "Everything"
+    df.headers["Write"] = "Everything"
     df.validate_definitions()
 
 
@@ -155,8 +155,8 @@ def test_empty_write(_output_dir):
     compare_dataframes(df, df_read)
 
 
-def test_filled_write(_output_dir, _filled_tfs):
-    df = _filled_tfs(plane="X", directory=_output_dir)
+def test_filled_write(_output_dir):
+    df = get_filled_tfs(plane="X", directory=_output_dir)
     df.write()
     assert os.path.isfile(df.get_filename())
     df_read = read_tfs(df.get_filename(), index="NAME")
@@ -170,8 +170,8 @@ def test_empty_read(_output_dir):
     compare_dataframes(df, df_read)
 
 
-def test_filled_read(_output_dir, _filled_tfs):
-    df = _filled_tfs(plane="X", directory=_output_dir)
+def test_filled_read(_output_dir):
+    df = get_filled_tfs(plane="X", directory=_output_dir)
     write_tfs(df.get_filename(), df, save_index="NAME")
     df_read = MyTfs(plane="X", directory=_output_dir).read()
     compare_dataframes(df, df_read)
@@ -202,8 +202,7 @@ def _output_dir():
         yield cwd
 
 
-@pytest.fixture()
-def _filled_tfs():
-    yield lambda plane, directory: MyTfs(plane=plane, directory=directory,
-                                         index=["A", "B"], columns=MyTfs.Columns("X", exclude=[MyTfs.Index]).names,
-               data=[["Wonder", 1.1], ["BAR", 4.4]], headers={"OffsetX": 100., "Title": "Test Title"})
+def get_filled_tfs(plane, directory):
+    return MyTfs(plane=plane, directory=directory,
+                 index=["A", "B"], columns=MyTfs.Columns("X", exclude=[MyTfs.Index]).names,
+                 data=[["Wonder", 1.1], ["BAR", 4.4]], headers={"OffsetX": 100., "Title": "Test Title"})

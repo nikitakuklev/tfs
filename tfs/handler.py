@@ -39,7 +39,7 @@ DEFAULT_COLUMN_WIDTH = 20
 MIN_COLUMN_WIDTH = 10
 
 
-class TfsDataFrame(pandas.DataFrame):
+class TfsDataFrame(DataFrame):
     """
     Class to hold the information of the built Pandas DataFrame,
     together with a way of getting the headers of the TFS file.
@@ -54,11 +54,11 @@ class TfsDataFrame(pandas.DataFrame):
             self.headers = args[0].headers
         self.headers = kwargs.pop("headers", self.headers)
         self.indx = _Indx(self)
-        super().__init__(*args, **kwargs)
+        DataFrame.__init__(self, *args, **kwargs)
 
     def __getitem__(self, key: object) -> object:
         try:
-            return super().__getitem__(key)
+            return DataFrame.__getitem__(self, key)
         except KeyError as e:
             try:
                 return self.headers[key]
@@ -69,7 +69,7 @@ class TfsDataFrame(pandas.DataFrame):
 
     def __getattr__(self, name: str) -> object:
         try:
-            return super().__getattr__(name)
+            return DataFrame.__getattr__(self, name)
         except AttributeError:
             try:
                 return self.headers[name]
@@ -81,7 +81,7 @@ class TfsDataFrame(pandas.DataFrame):
         return TfsDataFrame
 
     def __str__(self):
-        return f"{super().__str__().strip()}\nHeaders: {str(self.headers)}\n"
+        return f"{DataFrame.__str__(self).rstrip()}\nHeaders: {str(self.headers)}\n"
 
 
 class _Indx(object):
@@ -167,6 +167,7 @@ def write_tfs(tfs_path: str, data_frame: DataFrame, headers_dict: dict = None,
             If string, it saves the index of the data_frame to a column named by string.
         colwidth: Column width
     """
+    original_headers = getattr(data_frame, 'headers', None).copy()
     _validate(data_frame, f"to be written in {tfs_path:s}")
     if save_index:
         if isinstance(save_index, str):
@@ -181,11 +182,10 @@ def write_tfs(tfs_path: str, data_frame: DataFrame, headers_dict: dict = None,
         data_frame.insert(0, idx_name, data_frame.index)
     LOGGER.debug(f"Attempting to write file: {basename(tfs_path)} in {dirname(tfs_path)}")
 
-    if headers_dict is None:  # Tries to get headers from TfsDataFrame
-        try:
-            headers_dict = data_frame.headers
-        except AttributeError:
-            headers_dict = {}
+    if headers_dict is None and original_headers is not None:
+        headers_dict = original_headers
+    else:
+        headers_dict = {}
 
     colwidth = max(MIN_COLUMN_WIDTH, colwidth)
     headers_str = _get_headers_str(headers_dict)
@@ -200,6 +200,7 @@ def write_tfs(tfs_path: str, data_frame: DataFrame, headers_dict: dict = None,
     if save_index:
         # removed inserted column again
         data_frame.drop(data_frame.columns[0], axis=1, inplace=True)
+    data_frame.headers = original_headers  # might get lost with insert or drop
 
 
 def _get_headers_str(headers_dict):
