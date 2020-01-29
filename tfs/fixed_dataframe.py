@@ -66,6 +66,7 @@ will not be found. Not including them will result in unrestricted DataFrames.
 import os
 from collections import defaultdict, OrderedDict, namedtuple
 from contextlib import suppress
+import logging
 
 from tfs.handler import TfsDataFrame, read_tfs, write_tfs
 from tfs.tools import DotDict
@@ -128,29 +129,39 @@ class FixedTfs(TfsDataFrame):
     _initialized = False
 
     def __init__(self, plane: str = "", directory: str = "", *args, **kwargs):
+        logging.debug("test1")
         super().__init__(*args, **kwargs)
+        logging.debug("test2")
         cls = type(self)
+        logging.debug("test3")
         self._directory = directory
         self._plane = plane
         if not cls.two_planes and len(plane):
             raise ValueError(f"{cls.__name__} is planeless, but a plane was defined.")
         self._filename = os.path.join(directory, cls.filename.format(plane))
+        logging.debug("test4")
 
         self.Columns = None
-        with suppress(AttributeError, TypeError):
-            self.Columns = cls.Columns(plane, exclude=[cls.Index])
+        self.Columns = cls.Columns(plane, exclude=[cls.Index])
 
         self.Index = None
-        with suppress(AttributeError, TypeError):
-            self.Index = cls.Index(plane)
+        self.Index = cls.Index(plane)
 
         self.Headers = None
-        with suppress(AttributeError, TypeError):
-            self.Headers = cls.Headers(plane)
+        self.Headers = cls.Headers(plane)
 
+        logging.debug("test5")
         self._fill_missing_definitions()
+        logging.debug("test6")
         self.validate_definitions()
         self._initialized = True
+
+
+    @property
+    def _constructor(self):
+        logging.debug("If you see me several times, there's a problem")
+        return type(self)
+
 
     def __setitem__(self, key, value):
         try:
@@ -163,23 +174,39 @@ class FixedTfs(TfsDataFrame):
     # Fill function --------------------
 
     def _fill_missing_definitions(self):
+        logging.debug("test5.1")
         if self.Columns is not None:
             self._fill_missing_columns()
 
+        logging.debug("test5.2")
         if self.Headers is not None:
             self._fill_missing_headers()
 
+        logging.debug("test5.3")
         if self.Index is not None:
             self._fill_missing_index()
+
+        logging.debug("test5.4")
 
     # ---
 
     def _fill_missing_columns(self):
+        logging.debug("test5.1.1")
         for name, datatype, _ in self.Columns:
             if name not in self.columns:
                 self[name] = DEFAULTS[datatype]
-        self.reindex(self.Columns.names)
+        
+        logging.debug("test5.1.2")
+
+        indices = self.index
+        logging.debug("indices: {}".format(str(indices)))
+        
+        # This thing sends us into an infinite loop
+        self.reindex(list(self.Columns.names))
+
+        logging.debug("test5.1.3")
         self.astype({name: dtype for name, dtype, _ in self.Columns}, copy=False)
+        logging.debug("test5.1.4")
 
     def _fill_missing_headers(self):
         for name, datatype, _ in self.Headers:

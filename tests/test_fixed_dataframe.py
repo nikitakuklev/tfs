@@ -8,6 +8,8 @@ from .helper import compare_dataframes
 from tfs.fixed_dataframe import FixedColumn, FixedColumnCollection, FixedTfs
 from tfs.handler import read_tfs, write_tfs, TfsDataFrame
 
+import logging
+
 
 class MyTfs(FixedTfs):
     filename = "mytfs_{}.tfs"
@@ -50,6 +52,7 @@ def test_fixed_columns():
 
 def test_empty_df_creation():
     df = MyTfs(plane="X")
+
     assert len(df.Columns) == 2  # NAME is index
     assert df.index.name == MyTfs.Columns.NAME.name
     assert all(a == b for a, b in zip(df.Columns.names, df.columns))
