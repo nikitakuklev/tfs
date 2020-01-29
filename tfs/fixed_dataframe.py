@@ -153,13 +153,17 @@ class FixedTfs(TfsDataFrame):
         logging.debug("test4")
 
         self.Columns = None
-        self.Columns = cls.Columns(plane, exclude=[cls.Index])
+        logging.debug("test4 plane: {}".format(plane))
+        with suppress(AttributeError, TypeError):
+            self.Columns = cls.Columns(plane, exclude=[cls.Index])
 
         self.Index = None
-        self.Index = cls.Index(plane)
+        with suppress(AttributeError, TypeError):
+            self.Index = cls.Index(plane)
 
         self.Headers = None
-        self.Headers = cls.Headers(plane)
+        with suppress(AttributeError, TypeError):
+            self.Headers = cls.Headers(plane)
 
         logging.debug("test5")
         self._fill_missing_definitions()
@@ -221,7 +225,8 @@ class FixedTfs(TfsDataFrame):
         diff = list(set(current) - set(indices))
         for d in diff:
             logging.debug('Indices to remove: {}'.format(d))
-            self.drop(index=d)
+            # if you drop, weird stuff happens
+            #self.drop(index=d, errors="ignore")
 
         # This thing sends us into an infinite loop
         #self.reindex(list(self.Columns.names))
