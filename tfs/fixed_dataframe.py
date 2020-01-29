@@ -99,15 +99,26 @@ class FixedColumnCollection(object):
     def __init__(self, plane: str = "", exclude: FixedColumn = None):
         type_and_unit = namedtuple("type_and_unit", ["dtype", "unit"])
 
+        logging.debug('Arguments gotten for plane / FixedColumnCollection: {}'.format(plane))
+
         self.plane = plane
         if exclude is None:
             exclude = []
+
         columns = [c for c in type(self).__dict__.items() if isinstance(c[1], FixedColumn) and c[1] not in exclude]
+        logging.debug('Columns: {}'.format(columns))
+
         self.mapping = OrderedDict()
         for attribute, column in columns:
             new_column = column(plane)
+            logging.debug("Plane: {}".format(plane))
+            logging.debug("Column: {}".format(column))
+            logging.debug("Column type: {}".format(type(column)))
+            logging.debug("New column name: {}".format(new_column))
+
             setattr(self, attribute, new_column)  # use same attributes but now 'planed'
             self.mapping[new_column.name] = type_and_unit(dtype=new_column.dtype, unit=new_column.unit)
+
         self.names, (self.dtypes, self.units) = self.mapping.keys(), zip(*self.mapping.values())
 
     def __iter__(self):
@@ -198,11 +209,22 @@ class FixedTfs(TfsDataFrame):
         
         logging.debug("test5.1.2")
 
-        indices = self.index
-        logging.debug("indices: {}".format(str(indices)))
+        logging.debug('Column names dir: {}'.format(dir(self.Columns.names)))
+        logging.debug('Column names mro: {}'.format(self.Columns.names.__class__.__mro__))
+        logging.debug('Column names type: {}'.format(type(self.Columns.names)))
+        logging.debug('Column names as list: {}'.format(list(self.Columns.names)))
         
+        logging.debug('Current indices: {}'.format(list(self.index.values)))
+
+        current = self.index.values 
+        indices = list(self.Columns.names)
+        diff = list(set(current) - set(indices))
+        for d in diff:
+            logging.debug('Indices to remove: {}'.format(d))
+            self.drop(index=d)
+
         # This thing sends us into an infinite loop
-        self.reindex(list(self.Columns.names))
+        #self.reindex(list(self.Columns.names))
 
         logging.debug("test5.1.3")
         self.astype({name: dtype for name, dtype, _ in self.Columns}, copy=False)
