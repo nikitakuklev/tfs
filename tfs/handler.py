@@ -37,7 +37,7 @@ ID_TO_TYPE = {
     "%le": np.float64,
     "%f": np.float64,
     "%hd": np.int,
-    "%d": np.int,
+    "%d": np.int64,
 }
 DEFAULT_COLUMN_WIDTH = 20
 MIN_COLUMN_WIDTH = 10
