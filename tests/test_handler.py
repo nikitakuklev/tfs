@@ -4,8 +4,8 @@ import tempfile
 
 import numpy
 import pytest
-from pandas.util.testing import assert_frame_equal, assert_dict_equal, assert_index_equal
-from pandas import DataFrame
+from pandas.testing import assert_frame_equal, assert_series_equal, assert_index_equal
+from pandas import DataFrame, Series
 
 from tfs import read_tfs, write_tfs, TfsDataFrame
 from tfs.handler import TfsFormatError
@@ -51,6 +51,11 @@ def tfs_indx_pathlib_input(_tfs_file_pathlib: pathlib.Path):
 def tfs_indx_str_input(_tfs_file_str: str):
     test_file = read_tfs(_tfs_file_str)
     assert test_file.indx["BPMYB.5L2.B1"] == test_file.set_index("NAME")["BPMYB.5L2.B1"]
+
+
+def assert_dict_equal(a: dict, b: dict, *_, **__):
+    # No longer available in pandas, use Series instead
+    assert_series_equal(Series(a), Series(b))
 
 
 def test_tfs_write_read(_dataframe: TfsDataFrame, _test_file: str):
